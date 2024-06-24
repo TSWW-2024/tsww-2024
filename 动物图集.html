@@ -1,0 +1,357 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1>animal atlas</h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1>animal atlas</h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 3200px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": 0, "image": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/nG6WcEvYS9hE0OQvaFaPEP2Aia5RePsJJvZXeQ7hGSkKAD74EOGKuTznuNgf2CdIwRJ6c4ibEiaIlAbRZIGqtzHHg/640?wx_fmt=jpeg\u0026from=appmsg\u0026tp=webp\u0026wxfrom=5\u0026wx_lazy=1\u0026wx_co=1", "label": "\u9886\u72d0\u7334", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 1, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6FHNNicBxlArTEZlIdqsOib23QXDK05DrclVbNP4qicAGUAUuweTg8RWnh39nsHfvQVu4WBfib217fWA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u7ea2\u80c1\u84dd\u5c3e\u9e32", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 2, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6FHNNicBxlArTEZlIdqsOib2iaajdqhQwBfnnhB80pVJbrfNamIVqRTWuREPbZqNXBdDrIn6yGfcic4Q/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7ea2\u80c1\u84dd\u5c3e\u9e32", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 3, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6FHNNicBxlArTEZlIdqsOib2feyNRVptYyLSGMv9ukiaEEWibjTEeYFg0ibTNAX028jErW9ficIuwlK6rQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7ea2\u80c1\u84dd\u5c3e\u9e32", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 4, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5MGQ8MyKzdjDHcyiciaqgx97WC6vzNGabhDzcAS5QeOmwZ1WDmnmVUOcIh5yz5Q86eYe3Quw2ukm6g/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u96ea\u9e2e", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 5, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6cF2bHs4uLWBr9Z35E9l33alsfHf5KiaO7mIDWXWkNICBia3DpF21koaJU6w076ZPRuG5W4X18roXQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u4e1d\u5149\u690b\u9e1f", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 6, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4dCKeauhiciaaSQEuuKkOux23twJmCjOvZRnibzrdxkJVqW1S1N48uibdFvdyicsEEH0dq14lyicIwOClg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u767d\u988a\u566a\u9e5b", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 7, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7ia2oeEPVEkedgaSJD9OUB1EQmicOrlibI2jOgR70b2piaiaXmwWr3oiatKp6yhpm45UObYcwicjfIEqNRA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5c71\u9ebb\u96c0", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 8, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6YaJ5VVxDIwLl06fJAQibtaTwPd7u7vR71LBEicBeVibnj1kwgpKdQ8qVdETslsx6OXhJORwsTeOzXg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9886\u96c0\u5634\u9e4e", "shape": "circularImage", "size": 70}, {"color": "#97c2fc", "id": 9, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5E4aftKiaYGvxEiaqnSTRqicxlLXa5yoMEKMs1sDP0zUm4zddhBaK5aAI6PKjnWnZYmxjh2YQrNicoug/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7070\u5934\u9ea6\u9e21", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 10, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7LXUfShtgCDCSv7BPs5mtBiaXwX1PryjGAfbc9JJiagSicCgdb4Dfjict0Bicn6KmMjVHStrlcSldw0PQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u4e1c\u65b9\u767d\u9e73", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 11, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y50Zm4Z3yn7tvvBgQflBcSxDPw1QF9RSqrfXrPWqX35v7U0PznycS75lXdgaSMYevAQXCgib3rnSjw/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7eff\u7fc5\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 12, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4icuwgibH0wl0DF7nletPLAVexgvGbnH9AdIjo4GjSBc8xXvQvQSIBQkwGzfJ4qYmAHj40RcQtMjlw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u8d64\u9888\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 13, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6nlm1THohic9JPqxCWsbMxJdlHK1yFL1JdwDf1AInVzahrwaENdZuVbZLEKcD7w5PkwVHoSXLuYyQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9e3f\u96c1", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 14, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5XyO8TJkwSIY8o7AQoxZ554sITAWpVczRWKrej1QamnArlpa2OsucJiae2zDyQvCHey2EkJBQ98tA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u8d64\u9888\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 15, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7iaTRUdRLL7z41rVnkAPIc9Ve8XBtsMOkl9lm7cdZrh3UFUaCnMJyRweR7gibr7dWmB1M1A4P08cibA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u767d\u7fc5\u4ea4\u5634\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 16, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6dbuvV5HqgerqURsank7obf4ZVRtJU0CUU98cibTdQVqhBRleoncl6jWaMHt26Z5Y2AOzicHphln7w/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9707\u65e6\u9e26\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 17, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4q4Micticj1qOXp3eXciaUBJkzOsdC1iarWTo7nDzeiaUPCicphyQPz17H4tyLLrRyQJrYpvJooIJUFUOw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u51e4\u5934\u9e0a\u9dc9", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 18, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y70ecMlvc41OY1kvVmXHS7VCpuM27S9wnKR4jRpepANRxuKfcljtBVA4GZianiazbCU90eS0SrGHt2g/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u718a\u732b\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 19, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6uT4XoOd3P6wyrAYB4VaRRxyOV9xg3YcM1LYib0icDiaxib7IcYat6nUDuDnaYiaico7J7lib56abPlXBXg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5317\u957f\u5c3e\u5c71\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 20, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y76zBOQsCmPuSykhX34BicVlrNZNX0SaRqITtDZvs7JRczDUvicwAYic0iaf0vTFPrFqRGXq8MGemS1icg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u94f6\u5589\u957f\u5c3e\u5c71\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 21, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7NQ97X6mmeIHp5oe4RRlKtP8ciaiaFjyfoMYvUY0B2SbJRic1Ce9lmEd2xDpw0mXw2K7SSIcNcJyo4w/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u68d5\u5934\u9e26\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 22, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y50yOrv1ibte7M4uGetdlugLCribPD22XVAGS68alm2CiafiaRo2qibd8DwfNCJJcQo3x8qbum4U06qLPQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6587\u987b\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 23, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6Bd99BiaibGnkInqTV8SOoTJmX6uqSLwQ1dk2XRAnfiaoeZtRBNEp1L7x8siclL5244onqu3ZnpYInGQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u7ea2\u8179\u7070\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 24, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4zG4ht5YLnVbZiauT0B5267Xicicxo0VfQ1Y5fLs9rmpfEJfcyJf0yceN4iciajibqiapDQcuTficq2ugeMw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u592a\u5e73\u9e1f", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 25, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7GMGGX2icnIvsyuRcAzIsiaZpIMepS2P0V6JphS2RHpJmCn39wGic4DM0oTdwXnazJCibW6fQtBCbEEA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u9ec4\u7709\u67f3\u83ba", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 26, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6BTm9lpKEhkIia6AVCvGwuo6axmbMAkxPoE4lwlcZwtpsTZWzufpHeaqlAIsDrZgFTlMnrOWV4l2g/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u5927\u592a\u5e73\u9e1f", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 27, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6WpzDDndicPucIBzOuNCRBibiaNicg86QFYwshUBicxBebHtveaicNkleQB0OXcnjIZSiaiauvwlb4eRDRyg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9752\u5934\u6f5c\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 28, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4vBqsy7QyTibVQcb5EHBamDVjfcWn3yGvibEhl4lDJd2hZJDicB4aoJcnRXnib5qFZ9PicMw5Yia1rtVeA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u73ed\u5934\u96c1", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 29, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5IsxKNOmibgHBO0IoClfRIiciapicDRBickAia3zQnAzfPiaPGgGgu8ibVib5ZEtEZX8WZ32vg6cibnmhRQFlA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5929\u9e45", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 30, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6In1dUt3rRNItA5ReMXrTjXcu3vd7HNG0A1H8AbQqhT2xjAjwZSLA73W1LnwgBRdvXmOsmXd6ZVQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u7435\u5634\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 31, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5zFLjrTWN5n4iaX7g8vtYibZggvPcwkTj9l7iajtKJaGicNgECM4e0VpuH3M9FsclzOyUT9tRsPnP21Q/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u51e4\u5934\u6f5c\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 32, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4mibYtBatLvoP3qZ8FHynarYoRjHz0u7UUcUCic49MiaYEAcoAdsuWI3ITaFHuKP2STBheY4V9bwPhQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u767d\u7709\u59ec\u9e5f", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 33, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6zzht2fYNKENvf6rpZqENU3b0WtbI0rsuowK7UboynpwHaRrZRFngGb4IrDduMo83TxOWIibyN1Ig/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u51a0\u9c7c\u72d7", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 34, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5Kkn40KiaRic8EUPbgJicjkIGQhz9vnMJclHdpURhanxm3tEBYvLwhk38qqV9LsMWuvGAxl1Sw14QeQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5927\u9ebb\u9cfd", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 35, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6BbJEHJfPkI2icaoL7micunE7NAhViaCqRkTjLicljOSNCE5qT3V8F2hlJ1N68kaGPtibPECRIqpvmPbA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u79e7\u9e21", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 36, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7ClnfzYUpIXH08qvC6lskyibYQVJrjntmwNFibpNK0v6UZdGuZGTsdZ8ro5YPrHzlddlFvuKPHKdyg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5927\u9d5f", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 37, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5JLEOCn8aKjL2diaoxiaucry5DYytX77BpeyUscf8oXRWefcH75js3xpHImE6HqlrriahtxfeNtmo1w/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u767d\u9888\u957f\u5c3e\u96c9", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 38, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6ERUicYlKd5e41vicTUPwiaC2ICqbH8K8oxfAjVGiayjW8sujzrW2FwdFvhicDQOzbtlKoTnNn9hY806A/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u5317\u6731\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 39, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5upC0956bD1mtoTsRgyMILuJD3p1q59koUO4lsIoS2w72kPRXuBB1494pKH8WU0ibfwpUWTF6vbyg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u767d\u989d\u96c1", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 40, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6VfvfgibLNa8Hiale2MZKZqkcCu2XLUROCibKRuXHriaNPJMk6icicDa11ERgqGckia6oicnou7Aa9W5k6Kw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u767d\u9e47", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 41, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5vnQq2KpkYiaqpVeAqIhaYg7B4cCoTACe9QvxvJ4CmBmVWb3tKEZM3WdnhQHiaeB6oyMh4IWMcsMRg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u77ed\u8033\u9e2e", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 42, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7N1r03B0kVpmNVTibJmlT2yx7b3icdIauJPgvo050icn9zL2ZBvq2BqPaUnoMLljPp6MFm1jAhibHzpw/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u731b\u9e2e", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 43, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6wP5QYSuNcUtghPiaLGGYLUYiaUNMF7ibLjeUibbE0ISgqK5vcMvxWBia0RVohaHG5c29qQcricibNf8JzA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u9ed1\u7434\u9e21", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 44, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y79JMGAqXRmGrYwp8wgWgc8rvDVnjap02nB80vOcXeRKEm5oJptBhARQrr4RS9f3nJJwgmdZ8MXVA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7ea2\u80c1\u84dd\u5c3e\u9e32", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 45, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6ZKm2v8NqCfjHic12kicqb6etT9ut9lPcy44IlYQqZHibc6AhyqmAgXAJlOYYbaVkn3JyDCP7ugUnjw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u89d2\u767e\u7075", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 46, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6SxBT64YPkJ3HoUYdQzP8LHpL63JbUqrJ5nAwVShaVXkVMvV0lzApwjQJwX1GyDEdfSbrvgugKcg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u8d64\u72d0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 47, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6SxBT64YPkJ3HoUYdQzP8L4ktBzGDx7L4M0tjtm2GiaLEVW3lYWibtjuoDibaMPutwM634qcoXbNWCg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u94c1\u722a\u9e40", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 48, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y51icE0kqnJgRiblcoJMsMfxsXtBQahnaxLewIpdviaceGFHic16mkr9vsic3O866T6SqPvkAJm09Ebqog/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7070\u9e64", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 49, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y51icE0kqnJgRiblcoJMsMfxs7yicYtQH77lIUX0wv6kL0ibTqegOhwCibbroNTB0BEkicCzZR7fnhShr5A/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6c99\u5b64", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 50, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y64FpJKd7eErw5UCtibzqve9XWqIKAz21gXzISsHkfThjYDPYpabhY4AYicot8lMDuudmURfXpnyQwA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u53cd\u5634\u9e6c", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 51, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5C1XukdvG13y3QKCuebWQSKXibj7ogRpaFlNFZnZRSe1rOQ3e2Go7ibnu8SoeMVBbruzcHvU69pDsA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u767d\u9e61\u9e30", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 52, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6IibyIVJmicAKF8DD0KyPowG0LIZFHpDTv30hMOWDOeqspPlHLbiamfGuJnZ01vlgfwpGETeWzGLic5w/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6c34\u9e68", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 53, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7ft8xKjMFPvhkHliaTwAfuXTKuJaNLKicLCibunJNbthpXCjuhdL7ffqtD8CJpFfXkjYPtImQHE2M2A/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5927\u9e28", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 54, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6zK6d7s7N1fTib0wE9LyLlBrhwEFd2Kx8H5DjGUqia9RsqZIx6gTQ0TYDbb5opCF9ky8XtSNa8K3sA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u5bff\u5e26", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 55, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4y3TXj9co9iaTvaabaTUJrcAzRnZB7KteHnp7T3Py0IOHaYNUg9ibVVUiaZvsINLXibfiayXSoFo5Tdjw/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u9ed1\u51a0\u9e43\u96bc", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 56, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7CsIgPjAGadwwEq0rI23F6NviabxVOkIogue8cu1nG2oIOiad6d9n0AIuXvsHGDxtn1mHaqCWHqWsA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u4e09\u5b9d\u9e1f", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 57, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7Z11rO8h2SeUVXeK6sOibJlkz5YDlgiaoZiahGo2icpOqDTZ26jFj13TibD9Az6Itrkrg5tMApGruCozg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u53d1\u51a0\u5377\u5c3e", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 58, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7WEWibz9qv82qaONuHFbO5eUicFLd7tHWr9kclWBNEvPp0MzR6iceLPGcOyuTDC4NeUUI75FOhg6Lag/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u5c0f\u9e26\u9e43", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 59, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6CmyM2FZtd3enxlVSLj1rcE6JYQPZKCQibYoCIVxoNp9ajibHdwxibIw84f7SDQFFCPIdTkZ1U6msHg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u9e4a\u9e32", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 60, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6V2jx9DoADg07CmibYDUZicZzaXb1ds8bicWT5bJKicgPWDlVcIFuMLBjYoxnaHudJhzE67LOiaWH6icuA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6c34\u96c9", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 61, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y45LINXAicSY3SmO6oRCARrdDZS8EGosjRDJ6yibCF2gicicyN8miaBUGz35D3jqUfiar4aFJdAjCbHUxOA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u9e6a\u9e69", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 62, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7UJxC86b0VQickpuv92dNFOxibId8xf4UcTLNqep7RmJu6dtg6HibndREeU2gPUDJHgTH2KKiaPc3yFg/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9ec4\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 63, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y4ibZvAS9cice6TBHq2MH3Za7M4k5oh0JMPahrALQ7SpS4dkNvJZhGSGz3UtsmsxJwM2jrdGqTYBJZQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u4e91\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 64, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6D1MS4iboG4uqfIJVib1fQgFnDpJ0YTOFJiaAEaz6lAahj46B1Zoof3MJo2Ovg3gt6H7Bz2FS4pov0Q/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u7ea2\u5c3e\u9e2b", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 65, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5Hz2ZT6EPcdnNzlIgfqiao4t81XxeMBOesBPDH5VSSNDWiaV5tBlofFwZ6soibh4Ue7SP3EAdOuHcJQ/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u94c1\u5634\u6c99\u9e3b", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 66, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7pW5K6iamoMUjygc7EnTU3NXPVfhGyGSmnV30hl5NtVA6wWJL1bdTiaoutyZnBpkGctefdUEGVI9iag/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u73af\u9888\u9e3b", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 67, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y612rD1enrFtsuWchjm3KAVfsiacUMBUKQNwk7ReCO2yPd3e9UpQaiaCu8bbjicRqo3iaUTOabTL0qzIA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u767d\u9876\u6b4c\u9e32", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 68, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7a5CrXiasBhIuPxfVCibaaWXwgpD15kX253nJictFEvL7u34F6gCMnqd9aww1mVjXkC3Olz8uHLqIog/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u7164\u5c71\u96c0", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 69, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5QR5h2jZg1N6s2wPsaEY1mV3l2269fS2QF78t1cP8qhoZ1rOOTT5q8VWmSyTcyNm0iaOyuHibTYltg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u4f2f\u52b3", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 70, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y45lbFwIJQ6lYh6wf9fmcrEETqibXGf8g5xUc4eEA3rTdrxDNpBFXWVLRwJNwgE1VE7bZr30wib2A4g/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u96d5\u9e2e", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 71, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6phxkf7IZ36aOrOWVC3aLHcxlnT7HHRZQmChLqRtvgPSehJtBPibXRBtwWJiczTzF4WuoZ4bTBmIAA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6bdb\u817f\u6c99\u9e21", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 72, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y653p3dJa7beb7jicxFcdRyUFtkwxZDCDuCIYPCoUTOicNbO54jkZ6bn2mZYVdoIh0jQfLTrJ9weafA/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u6234\u83ca", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 73, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6nS0jc4lIVwXKiasz3Ps8bfR9nGYM335KOq0FX0069a4MeiaZ5pk3xz5F0sg5c9N4LeiaTdyJqR7h6Q/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u9ed1\u7fc5\u9e22", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 74, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6JY5cnHQ5zHLKW0ric2DPsLXLCwRJIjwUtNn0NaGsGHwNmVEg5weserkqJNNBcJib4K1GubAQszplg/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u6731\u9e6e", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 75, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6hhQccicFVlFmlst8x2rZXw4aGn5xnriaEFqRdoMjqM9MpU4r7AZSA3vTXcibxRxgUNlicib8KUJPqQNA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u4e39\u9876\u9e64", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 76, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7z6p5ZWgps0nF0rwhD7wibA0TdpCTMaHkyvbcRKLUQJBem4LEjYC1o5ocnpMvxMY0QPXT47Q0ibic2Q/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u82b1\u8138\u9e2d", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 77, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y7Wofiayh7Ah8nFdgsPUm8ZgmG7AUGMHnnWOlNe9w7Q3vf83z939TF0v4ibia81GcvRCWmibtKn9LtfDw/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u79c3\u9e6b", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 78, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y6KNXJZIa8UHuCKbue1m1ibL8B6hy2IoIbQYVDRcb3A0R1ibD9KiaTk8gFXMLL4TDTe9XhCsOpZaHpjA/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u6591\u9e2b", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 79, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y5Ry6KuicQ9K6w7KomBAUTgf1LKmvtDcY3licBp7CbD6TuG9QFse71P8RJMMUn85EVibaibXyJpYGiapYQ/640?wxfrom=12\u0026tp=wxpic\u0026wx_fmt=jpeg", "label": "\u68d5\u7709\u67f3\u83ba", "shape": "circularImage", "size": 80}, {"color": "#97c2fc", "id": 80, "image": "https://mmbiz.qpic.cn/mmbiz_jpg/cOksH6R65y63S3fvia0VHMcbRiacUsFmwrKOTqY4bkFicdZejphta1bqUBKwyibj7vHwtdoH6ibkL0PvZg6pB4VAe0w/640?wxfrom=12\u0026tp=wxpic\u0026usePicPrefetch=1\u0026wx_fmt=jpeg", "label": "\u661f\u5934\u5544\u6728\u9e1f", "shape": "circularImage", "size": 80}]);
+                  edges = new vis.DataSet([{"from": 0, "to": 1}, {"from": 1, "to": 2}, {"from": 2, "to": 3}, {"from": 3, "to": 4}, {"from": 4, "to": 5}, {"from": 5, "to": 6}, {"from": 6, "to": 7}, {"from": 7, "to": 8}, {"from": 8, "to": 9}, {"from": 9, "to": 0}, {"from": 10, "to": 11}, {"from": 11, "to": 12}, {"from": 12, "to": 13}, {"from": 13, "to": 14}, {"from": 14, "to": 15}, {"from": 15, "to": 16}, {"from": 16, "to": 17}, {"from": 17, "to": 18}, {"from": 18, "to": 19}, {"from": 19, "to": 10}, {"from": 20, "to": 21}, {"from": 21, "to": 22}, {"from": 22, "to": 23}, {"from": 23, "to": 24}, {"from": 24, "to": 25}, {"from": 25, "to": 26}, {"from": 26, "to": 27}, {"from": 27, "to": 28}, {"from": 28, "to": 29}, {"from": 29, "to": 20}, {"from": 30, "to": 31}, {"from": 31, "to": 32}, {"from": 32, "to": 33}, {"from": 33, "to": 34}, {"from": 34, "to": 35}, {"from": 35, "to": 36}, {"from": 36, "to": 37}, {"from": 37, "to": 38}, {"from": 38, "to": 39}, {"from": 39, "to": 30}, {"from": 40, "to": 41}, {"from": 41, "to": 42}, {"from": 42, "to": 43}, {"from": 43, "to": 44}, {"from": 44, "to": 45}, {"from": 45, "to": 46}, {"from": 46, "to": 47}, {"from": 47, "to": 48}, {"from": 48, "to": 49}, {"from": 49, "to": 40}, {"from": 50, "to": 51}, {"from": 51, "to": 52}, {"from": 52, "to": 53}, {"from": 53, "to": 54}, {"from": 54, "to": 55}, {"from": 55, "to": 56}, {"from": 56, "to": 57}, {"from": 57, "to": 58}, {"from": 58, "to": 59}, {"from": 59, "to": 50}, {"from": 60, "to": 61}, {"from": 61, "to": 62}, {"from": 62, "to": 63}, {"from": 63, "to": 64}, {"from": 64, "to": 65}, {"from": 65, "to": 66}, {"from": 66, "to": 67}, {"from": 67, "to": 68}, {"from": 68, "to": 69}, {"from": 69, "to": 60}, {"from": 70, "to": 71}, {"from": 71, "to": 72}, {"from": 72, "to": 73}, {"from": 73, "to": 74}, {"from": 74, "to": 75}, {"from": 75, "to": 76}, {"from": 76, "to": 77}, {"from": 77, "to": 78}, {"from": 78, "to": 79}, {"from": 79, "to": 70}, {"from": 80, "to": 70}, {"from": 80, "to": 60}, {"from": 80, "to": 50}, {"from": 80, "to": 40}, {"from": 80, "to": 30}, {"from": 80, "to": 20}, {"from": 80, "to": 10}, {"from": 80, "to": 0}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.9,
+            "gravitationalConstant": -80000,
+            "springConstant": 0.5,
+            "springLength": 10
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
